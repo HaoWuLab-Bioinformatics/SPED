@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sped-perturb-seq"
+version = "0.1.0"
+description = "SPED models and evaluation code for combinatorial perturbation prediction"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "scipy>=1.10",
+  "scanpy>=1.9",
+  "torch>=2.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
