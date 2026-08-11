@@ -1,0 +1,13 @@
+{
+  "root": "/home/user017/Project/Perturb-seq/publication_code",
+  "additive_dir": "/home/user017/Project/Perturb-seq/publication_code/outputs/smoke/empirical_additive",
+  "sped_dir": "/home/user017/Project/Perturb-seq/publication_code/outputs/smoke/loss_ablation",
+  "seeds": [
+    0
+  ],
+  "lambda_single": 1.0,
+  "top_k": 20,
+  "n_bootstrap": 1000,
+  "bootstrap_seed": 2026,
+  "output_dir": "/home/user017/Project/Perturb-seq/publication_code/outputs/smoke/statistics"
+}

@@ -1,0 +1,166 @@
+{
+  "pipeline": "SPED publication results",
+  "git_commit": "bbf6773de65c8044b216707d7af12fa86eba1754",
+  "started_at": "2026-08-11T02:02:03.957268+00:00",
+  "finished_at": "2026-08-11T02:02:19.812632+00:00",
+  "arguments": {
+    "adata": "data/Norman/norman_2019_full_adata.h5ad",
+    "stages": [
+      "all"
+    ],
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "lambdas": [
+      0.0,
+      0.1,
+      0.3,
+      1.0,
+      3.0
+    ],
+    "main_lambda": 1.0,
+    "epochs": 50,
+    "batch_size": 256,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "embedding_dim": 64,
+    "effect_hidden": 512,
+    "top_k": 20,
+    "n_bootstrap": 10000,
+    "bootstrap_seed": 2026,
+    "sampling": "cell",
+    "device": null,
+    "smoke": true,
+    "force": false,
+    "dry_run": false
+  },
+  "effective_settings": {
+    "stages": [
+      "additive",
+      "sped",
+      "compare",
+      "summarize"
+    ],
+    "seeds": [
+      0
+    ],
+    "lambdas": [
+      0.0,
+      1.0
+    ],
+    "epochs": 2,
+    "n_bootstrap": 1000,
+    "device": "cpu",
+    "additive_mode": "smoke"
+  },
+  "steps": [
+    {
+      "name": "empirical additive baseline",
+      "command": [
+        "/home/user017/anaconda3/envs/perturb2/bin/python",
+        "/home/user017/Project/Perturb-seq/publication_code/experiments/empirical_additive.py",
+        "--project-root",
+        "/home/user017/Project/Perturb-seq/publication_code",
+        "--adata",
+        "/home/user017/Project/Perturb-seq/data/Norman/norman_2019_full_adata.h5ad",
+        "--mode",
+        "smoke",
+        "--top-k",
+        "20",
+        "--output-dir",
+        "/home/user017/Project/Perturb-seq/publication_code/outputs/smoke/empirical_additive"
+      ],
+      "started_at": "2026-08-11T02:02:03.957544+00:00",
+      "finished_at": "2026-08-11T02:02:09.723067+00:00"
+    },
+    {
+      "name": "SPED matched loss experiment",
+      "command": [
+        "/home/user017/anaconda3/envs/perturb2/bin/python",
+        "/home/user017/Project/Perturb-seq/publication_code/experiments/sped_loss_ablation.py",
+        "--project-root",
+        "/home/user017/Project/Perturb-seq/publication_code",
+        "--adata",
+        "/home/user017/Project/Perturb-seq/data/Norman/norman_2019_full_adata.h5ad",
+        "--seeds",
+        "0",
+        "--lambdas",
+        "0.0",
+        "1.0",
+        "--epochs",
+        "2",
+        "--batch-size",
+        "256",
+        "--learning-rate",
+        "0.001",
+        "--weight-decay",
+        "0.0001",
+        "--embedding-dim",
+        "64",
+        "--effect-hidden",
+        "512",
+        "--top-k",
+        "20",
+        "--device",
+        "cpu",
+        "--sampling",
+        "cell",
+        "--output-dir",
+        "/home/user017/Project/Perturb-seq/publication_code/outputs/smoke/loss_ablation",
+        "--smoke"
+      ],
+      "started_at": "2026-08-11T02:02:09.723284+00:00",
+      "finished_at": "2026-08-11T02:02:18.182565+00:00"
+    },
+    {
+      "name": "paired SPED versus empirical-additive comparison",
+      "command": [
+        "/home/user017/anaconda3/envs/perturb2/bin/python",
+        "/home/user017/Project/Perturb-seq/publication_code/experiments/compare_predictions.py",
+        "--root",
+        "/home/user017/Project/Perturb-seq/publication_code",
+        "--additive-dir",
+        "/home/user017/Project/Perturb-seq/publication_code/outputs/smoke/empirical_additive",
+        "--sped-dir",
+        "/home/user017/Project/Perturb-seq/publication_code/outputs/smoke/loss_ablation",
+        "--output-dir",
+        "/home/user017/Project/Perturb-seq/publication_code/outputs/smoke/statistics",
+        "--seeds",
+        "0",
+        "--lambda-single",
+        "1.0",
+        "--top-k",
+        "20",
+        "--n-bootstrap",
+        "1000",
+        "--bootstrap-seed",
+        "2026"
+      ],
+      "started_at": "2026-08-11T02:02:18.183038+00:00",
+      "finished_at": "2026-08-11T02:02:18.974555+00:00"
+    },
+    {
+      "name": "main metric summary",
+      "command": [
+        "/home/user017/anaconda3/envs/perturb2/bin/python",
+        "/home/user017/Project/Perturb-seq/publication_code/experiments/summarize_runs.py",
+        "/home/user017/Project/Perturb-seq/publication_code/outputs/smoke/empirical_additive/aggregate_smoke.csv",
+        "/home/user017/Project/Perturb-seq/publication_code/outputs/smoke/loss_ablation/aggregate_loss_ablation.csv",
+        "--output",
+        "/home/user017/Project/Perturb-seq/publication_code/outputs/smoke/tables/main_metrics_summary.csv",
+        "--group-by",
+        "method",
+        "lambda_single",
+        "sampling",
+        "--uncertainty-source",
+        "split"
+      ],
+      "started_at": "2026-08-11T02:02:18.974958+00:00",
+      "finished_at": "2026-08-11T02:02:19.809753+00:00"
+    }
+  ]
+}
