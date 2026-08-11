@@ -1,74 +1,113 @@
-# SPED publication code
+# SPED
 
-It contains the core SPED model, evaluation metrics, fixed Norman splits, and the
-experiments needed to reproduce the main methodological claims. Large datasets,
-checkpoints, exploratory notebooks, and generated outputs are excluded.
+**Single-Perturbation Effect Decomposition for data-efficient prediction of unmeasured double-gene perturbations**
 
-## Repository layout
+SPED is a compositional model for predicting transcriptomic responses to double-gene perturbations. It learns a reusable expression-effect vector for each perturbation gene from measured single-perturbation responses and predicts an unmeasured pair by composing the two learned effects with a control reference.
+
+This repository contains the core SPED implementation, fixed Norman2019 evaluation protocols, evaluation metrics, matched loss-ablation experiments, an empirical additive reference, and scripts for condition-level statistical comparisons. Large expression matrices, trained checkpoints, exploratory notebooks, and generated outputs are not distributed in the repository.
+
+## Method overview
+
+For perturbation genes $A$ and $B$, SPED predicts the double-perturbation expression profile as
 
 ```text
-publication_code/
-├── make_all_results.py         # one-command result pipeline
-├── src/sped/                   # reusable model and metrics
-├── experiments/               # command-line experiments and statistics
-├── protocols/                 # fixed train/test split JSON files
-├── tests/                     # lightweight unit tests
-├── DATA.md                     # data source, preprocessing and checksums
-├── environment.yml            # pinned environment used for the experiments
-├── requirements.txt
-└── pyproject.toml
+predicted(A + B) = control reference + learned effect(A) + learned effect(B)
 ```
 
-The primary SPED implementation is `sped.model.AdditiveOnlyModel`. It predicts a
-double perturbation as the control reference plus two learned single-gene
-effects. `InteractionPerturbationModel` is retained as the nonlinear interaction
-extension used during model-development ablations.
+The effect decoder is shared across genes. Single-perturbation observations directly supervise the corresponding learned effects, allowing SPED to make predictions even when no double-perturbation condition is used for training. The principal implementation is `sped.model.AdditiveOnlyModel`. `InteractionPerturbationModel` is retained as the symmetric interaction extension used in the ablation analyses.
 
-## Data contract
+The primary evaluation task holds out double-perturbation conditions while retaining measured single-perturbation responses for their component genes. It therefore evaluates extrapolation to **unmeasured combinations of observed genes**, not strict generalization to genes with no perturbation-response measurements.
 
-The processed Norman AnnData file must contain:
+## Repository structure
 
-- `adata.obs["guide_identity"]`, with labels such as `ctrl`, `GENE+ctrl`, and
-  `GENE1+GENE2`;
-- `adata.layers["log_expr"]` (or expression in `adata.X` when configured);
-- gene identifiers in `adata.var_names`.
+```text
+.
+├── make_all_results.py          # Reproduce the publication-facing analyses
+├── src/sped/
+│   ├── model.py                 # SPED models, datasets, and training utilities
+│   ├── metrics.py               # Paper-facing evaluation metrics
+│   └── basic_metrics.py         # Backward-compatible evaluation utilities
+├── experiments/
+│   ├── empirical_additive.py    # Empirical additive reference
+│   ├── sped_loss_ablation.py    # Matched single-supervision ablation
+│   ├── compare_predictions.py   # Paired SPED/reference comparison
+│   ├── paired_bootstrap.py      # Condition-level paired bootstrap
+│   └── summarize_runs.py        # Repeated-run summaries and intervals
+├── protocols/                   # Versioned train/test split definitions
+├── tests/                       # Lightweight unit tests
+├── DATA.md                      # Dataset source, preprocessing, and checksums
+├── SOURCE_MANIFEST.md           # Mapping from working code to this release
+├── environment.yml              # Reproducibility environment
+├── requirements.txt             # Minimal Python dependencies
+└── pyproject.toml                # Installable package metadata
+```
 
-The default location is
-`data/Norman/norman_2019_full_adata.h5ad`. Data are not included because of size
-and redistribution requirements. Every data-dependent command accepts
-`--adata /path/to/file.h5ad`.
+## Requirements
+
+- Python 3.10
+- NumPy
+- pandas
+- SciPy
+- Scanpy
+- PyTorch
+- `cell-gears==0.1.2` for downloading the GEARS-preprocessed Norman2019 dataset
+
+The reported experiments were run on Linux with Python 3.10.18 and a CUDA 12.4 build of PyTorch. CPU execution is supported for tests and smoke runs; full experiments are substantially faster on a CUDA-capable GPU.
 
 ## Installation
 
-The exact tested environment is recorded in `environment.yml`; see `DATA.md` for data acquisition and preprocessing. Python 3.10 is recommended.
+### Reproducibility environment
+
+The pinned environment used for the experiments is provided in `environment.yml`:
 
 ```bash
-cd publication_code
+git clone https://github.com/HaoWuLab-Bioinformatics/SPED.git
+cd SPED
 conda env create -f environment.yml
 conda activate sped
 ```
 
-Alternatively, install the reusable package in a virtual environment:
+The environment includes the CUDA 12.4 PyTorch build. On systems without a compatible GPU, install an appropriate CPU or CUDA build of PyTorch instead.
+
+### Minimal editable installation
+
+To use the reusable `sped` package without recreating the complete experimental environment:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
+python -m pip install --upgrade pip
 python -m pip install -e .
 ```
 
-For GPU experiments, install the PyTorch build matching the local CUDA version.
+## Data
 
-## One-command reproduction
+The experiments use the Norman2019 K562 combinatorial CRISPR activation Perturb-seq dataset:
 
-Run the complete five-split pipeline (empirical additive, SPED loss experiment, paired comparison, and summary tables):
+> Norman TM, Horlbeck MA, Replogle JM, et al. Exploring genetic interaction manifolds constructed from rich single-cell phenotypes. *Science*. 2019;365(6455):786–793. https://doi.org/10.1126/science.aax4438
 
-```bash
-python make_all_results.py \
-  --adata /path/to/norman_2019_full_adata.h5ad \
-  --device cuda:0
+The expression matrix is not redistributed because of its size and upstream data terms. The primary archive is [GEO GSE133344](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE133344). The experiments in this repository start from the preprocessed Norman dataset distributed through the official [GEARS](https://github.com/snap-stanford/GEARS) loader.
+
+Complete download instructions, preprocessing details, expected AnnData fields, dataset dimensions, and SHA256 checksums are provided in [`DATA.md`](DATA.md).
+
+The default processed-data path is:
+
+```text
+data/Norman/norman_2019_full_adata.h5ad
 ```
 
-Inspect every command without running it:
+The file may be stored elsewhere by passing an explicit `--adata` path.
+
+## Quick validation
+
+After installation, run the unit tests from the repository root:
+
+```bash
+PYTHONPATH=src python -m compileall -q src experiments tests
+PYTHONPATH=src python -m unittest discover -s tests -v
+```
+
+Inspect the complete pipeline without launching any experiment:
 
 ```bash
 python make_all_results.py \
@@ -76,19 +115,52 @@ python make_all_results.py \
   --dry-run
 ```
 
-Run a small end-to-end CPU check:
+Run a small end-to-end CPU smoke test:
 
 ```bash
 python make_all_results.py \
   --adata /path/to/norman_2019_full_adata.h5ad \
-  --smoke
+  --smoke \
+  --device cpu
 ```
 
-The runner writes `outputs/run_manifest.json` after a full run and `outputs/smoke/run_manifest.json` after a smoke run. Use `python make_all_results.py --help` for stage selection, seeds, hyperparameters, resume behavior, and other options.
+Smoke-test artifacts are written to `outputs/smoke/` and are isolated from full experimental results.
 
-## Individual experiments
+## Reproducing the analyses
 
-Empirical additive baseline, one-split smoke run:
+Run the complete five-split pipeline:
+
+```bash
+python make_all_results.py \
+  --adata /path/to/norman_2019_full_adata.h5ad \
+  --device cuda:0
+```
+
+The default pipeline executes, in order:
+
+1. the empirical additive reference;
+2. the matched SPED single-supervision experiment;
+3. paired comparisons of aligned condition-level predictions; and
+4. summary-table generation.
+
+Use `--stages` to run selected stages and `--help` to inspect all configuration options:
+
+```bash
+python make_all_results.py --help
+
+python make_all_results.py \
+  --stages additive sped \
+  --adata /path/to/norman_2019_full_adata.h5ad \
+  --device cuda:0
+```
+
+The standard configuration uses seeds 0--4, 50 training epochs, `lambda_single` values of 0, 0.1, 0.3, 1, and 3, and the versioned split files in `protocols/`.
+
+## Running individual experiments
+
+### Empirical additive reference
+
+One-split smoke run:
 
 ```bash
 python experiments/empirical_additive.py \
@@ -96,7 +168,7 @@ python experiments/empirical_additive.py \
   --mode smoke
 ```
 
-Empirical additive baseline on all five standard splits:
+All five standard splits:
 
 ```bash
 python experiments/empirical_additive.py \
@@ -104,7 +176,7 @@ python experiments/empirical_additive.py \
   --mode standard
 ```
 
-Matched SPED single-supervision ablation:
+### Matched SPED loss ablation
 
 ```bash
 python experiments/sped_loss_ablation.py \
@@ -112,50 +184,58 @@ python experiments/sped_loss_ablation.py \
   --device cuda:0
 ```
 
-Use `--smoke --device cpu` for a two-epoch structural check. Outputs are written
-under `outputs/` and ignored by Git. Smoke artifacts are isolated under `outputs/smoke/` so they cannot be resumed as full runs.
+For a short structural check, add `--smoke --device cpu`.
 
-After the baseline and SPED runs finish, compare aligned predictions across all
-splits:
+### Paired comparison
+
+After the empirical additive and SPED runs have completed:
 
 ```bash
 python experiments/compare_predictions.py
 ```
 
-Run a paired bootstrap for any two aligned prediction archives:
+For two explicitly selected aligned prediction archives:
 
 ```bash
 python experiments/paired_bootstrap.py \
   --left outputs/loss_ablation/<sped-archive>.npz \
-  --right outputs/empirical_additive/<baseline-archive>.npz \
+  --right outputs/empirical_additive/<reference-archive>.npz \
   --left-name SPED \
   --right-name empirical-additive \
   --output outputs/statistics/paired_bootstrap.csv
 ```
 
-Use `python <script> --help` for all available options.
+Run `python <script> --help` for the complete argument list of any experiment.
 
-## Verification
+## Outputs
 
-From this directory:
+Generated files are written under `outputs/` and excluded from version control. A complete run produces:
 
-```bash
-PYTHONPATH=src python -m compileall -q src experiments tests
-PYTHONPATH=src python -m unittest discover -s tests -v
+```text
+outputs/
+├── empirical_additive/          # Per-split reference predictions and metrics
+├── loss_ablation/               # SPED predictions and loss-ablation metrics
+├── statistics/                  # Paired comparisons and bootstrap summaries
+├── tables/                      # Aggregated result tables
+└── run_manifest.json            # Commands and settings executed by the runner
 ```
+
+The runner supports resuming completed SPED configurations. Use `--force` to retrain them. Smoke outputs are always separated under `outputs/smoke/` and cannot be resumed as full runs.
 
 ## Reproducibility notes
 
-- The versioned split JSON files must not be regenerated for reported runs.
-- The main comparison evaluates held-out double perturbations whose component
-  genes have observed single-perturbation profiles.
-- Pearson delta and DEG Pearson delta subtract the control reference, reducing
-  the control-profile bias of raw-expression correlations.
-- The primary uncertainty source is the held-out-combination split. Report all
-  per-split scores, not only their mean.
-- Archive generated prediction matrices for paired, condition-level bootstrap
-  comparisons.
+- Use the versioned JSON files in `protocols/` for reported experiments; do not regenerate the published train/test assignments.
+- Standard splits hold out 25 of the 128 measured double-perturbation conditions and retain all 102 single-perturbation conditions in training.
+- Predictions and observations are evaluated as condition-level mean expression profiles, so each held-out condition contributes equally to aggregate metrics.
+- Pearson delta and DEG Pearson delta are calculated after subtracting the control reference.
+- The five standard runs vary the held-out-combination split together with model initialization. Per-split scores should therefore be retained and reported alongside aggregate summaries.
+- Prediction archives contain aligned condition-level matrices for paired bootstrap comparisons.
+- The exact data provenance and preprocessing decisions, including the highly variable gene selection procedure, are documented in `DATA.md`.
 
-## Public-release checklist
+## Citation
 
-Add the final paper citation, author/contact information, and a license chosen by the project owner. Data provenance, checksums, and the tested environment are now recorded in `DATA.md` and `environment.yml`. This directory deliberately does not assert a license.
+If you use this repository, please cite the associated manuscript:
+
+> *SPED: Single-Perturbation Effect Decomposition for Data-Efficient Prediction of Unmeasured Double-Gene Combinations.*
+
+The complete journal citation will be added after publication.
