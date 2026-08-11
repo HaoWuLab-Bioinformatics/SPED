@@ -1,7 +1,6 @@
 # SPED publication code
 
-This is the clean, publication-facing subset of the Perturb-seq project. It
-contains the core SPED model, evaluation metrics, fixed Norman splits, and the
+It contains the core SPED model, evaluation metrics, fixed Norman splits, and the
 experiments needed to reproduce the main methodological claims. Large datasets,
 checkpoints, exploratory notebooks, and generated outputs are excluded.
 
